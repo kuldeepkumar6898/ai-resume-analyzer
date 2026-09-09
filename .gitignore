@@ -1,0 +1,9 @@
+.env
+*.db
+__pycache__/
+*.py[cod]
+uploads/*
+exports/*
+!uploads/.gitkeep
+!exports/.gitkeep
+*.log

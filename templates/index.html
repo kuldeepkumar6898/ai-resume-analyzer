@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Resume Studio — Phase 5</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="topbar"><div class="brand"><span class="brand-mark">AI</span><div><b>Resume Studio</b><small>AI Resume Analyzer</small></div></div><div class="nav-user"><span>Hi, {{ session.user.name }}</span><a href="{{ url_for('history') }}">History</a><a href="{{ url_for('applications') }}">Applications</a><a href="{{ url_for('logout') }}">Logout</a></div></header>
+<main class="container">
+<section class="hero"><div><span class="eyebrow">PROFESSIONAL RESUME PLATFORM</span><h1>Build a resume that gets noticed.</h1><p>Analyze, customize, preview and export your resume from one workspace.</p></div><div class="hero-stat"><span>ATS Ready</span><strong>{% if result %}{{ result.ats_score }}%{% else %}—{% endif %}</strong></div></section>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<section class="dashboard-grid">
+<div class="left-panel">
+  <div class="card upload-card"><div><h2>Analyze Existing Resume</h2><p class="muted">Upload PDF, DOCX or TXT to calculate ATS score and detect skills.</p></div><form method="post" enctype="multipart/form-data" class="upload-form"><label class="dropzone" id="dropzone"><input id="resumeFile" type="file" name="resume" accept=".pdf,.docx,.txt" required><span class="drop-icon">↥</span><b>Drag & drop your resume</b><small>or click to browse • PDF, DOCX, TXT</small></label><button type="submit">Analyze Resume</button></form></div>
+{% if result %}<div class="stats"><div class="stat"><span>ATS Score</span><b>{{ result.ats_score }}%</b></div><div class="stat"><span>Word Count</span><b>{{ result.word_count }}</b></div><div class="stat"><span>Skills Found</span><b>{{ result.skills|length }}</b></div></div><div class="card"><h2>Detected Skills</h2><div class="chips">{% for s in result.skills %}<span>{{ s }}</span>{% endfor %}</div></div>{% endif %}
+  <div class="card builder-card"><div class="section-head"><div><span class="eyebrow dark">MODULE 2 • PREMIUM BUILDER</span><h2>Resume Builder</h2><p class="muted">Switch templates, personalize the accent color and add a professional profile photo.</p></div></div>
+  <div class="premium-controls">
+   <div class="template-gallery">
+    <button class="template-btn active" data-template="classic"><span>Classic</span><small>ATS • Clean</small></button>
+    <button class="template-btn" data-template="modern"><span>Modern</span><small>Bold • Visual</small></button>
+    <button class="template-btn" data-template="minimal"><span>Minimal</span><small>Elegant • Simple</small></button>
+    <button class="template-btn" data-template="corporate"><span>Corporate</span><small>Executive</small></button>
+    <button class="template-btn" data-template="tech"><span>Tech</span><small>Developer</small></button>
+    <button class="template-btn" data-template="fresher"><span>Fresher</span><small>Student • Entry</small></button>
+    <button class="template-btn" data-template="two-column"><span>Two Column</span><small>Compact • Modern</small></button>
+   </div>
+   <div class="personalize-bar">
+    <label class="photo-picker">Profile Photo<input id="profilePhoto" type="file" accept="image/png,image/jpeg,image/webp"><span id="photoName">No photo selected</span></label>
+    <label class="color-picker">Accent Color<input id="accentColor" type="color" value="#2563eb"><span id="accentHex">#2563EB</span></label>
+    <button class="secondary" type="button" onclick="resetDesign()">Reset Design</button>
+   </div>
+  </div>
+  <div class="builder-layout">
+   <div class="editor">
+    <div class="form-grid"><label>Full Name<input id="name" placeholder="Your Name"></label><label>Email<input id="email" placeholder="you@example.com"></label><label>Phone<input id="phone" placeholder="+91 9876543210"></label><label>Location<input id="location" placeholder="Delhi, India"></label><label>LinkedIn<input id="linkedin" placeholder="linkedin.com/in/username"></label><label>Skills<input id="skills" placeholder="Python, SQL, Excel, Git"></label></div>
+    <label>Professional Summary<textarea id="summary" rows="4" placeholder="Write a concise professional summary..."></textarea></label>
+    <div class="drag-help">↕ Drag the section cards below to change their order</div>
+    <div id="sectionList" class="section-list">
+      <div class="builder-section" draggable="true" data-section="experience"><div class="drag-handle">⋮⋮</div><label>Experience<textarea id="experience" rows="6" placeholder="Company — Role — Dates&#10;• Achievement with measurable result"></textarea></label></div>
+      <div class="builder-section" draggable="true" data-section="projects"><div class="drag-handle">⋮⋮</div><label>Projects<textarea id="projects" rows="5" placeholder="Project name — technologies — result"></textarea></label></div>
+      <div class="builder-section" draggable="true" data-section="education"><div class="drag-handle">⋮⋮</div><label>Education<textarea id="education" rows="4" placeholder="Degree, Institution, Year"></textarea></label></div>
+      <div class="builder-section" draggable="true" data-section="certifications"><div class="drag-handle">⋮⋮</div><label>Certifications<textarea id="certifications" rows="4" placeholder="Certification — Issuer — Year"></textarea></label></div>
+    </div>
+    <div class="actions"><button onclick="saveResumeToCloud()">Save Resume</button><button class="secondary" onclick="exportResume('pdf')">Export PDF</button><button class="secondary" onclick="exportResume('docx')">Export DOCX</button></div><div id="exportStatus"></div>
+   </div>
+   <div class="preview-wrap"><div class="preview-toolbar"><b>Live Preview</b><span id="templateName">Classic</span></div><div class="preview-meta">A4 preview • Multi-page PDF ready</div><div id="resumePreview" class="resume-preview classic"></div></div>
+  </div></div>
+  <div class="card"><h2>AI Resume Rewriter</h2><label>Job Description<textarea id="jd" rows="6" placeholder="Paste the target job description here..."></textarea></label><button onclick="rewriteResume()">Generate Improvements</button><div id="rewriteOutput"></div></div>
+  <div class="card"><h2>Skill Gap Analyzer</h2><button onclick="skillGap()">Analyze Skill Gap</button><div id="gapOutput"></div></div>
+  <div class="card optimizer-card">
+   <div class="section-head"><div><span class="eyebrow dark">MODULE 3</span><h2>AI Resume Optimization</h2><p class="muted">Turn the job description into a practical, job-specific optimization plan.</p></div><div class="optimizer-score" id="optimizerScore">—%</div></div>
+   <div class="optimizer-grid"><div><label>Resume Content<textarea id="optimizerResume" rows="10" placeholder="Your uploaded resume text will appear here. You can also paste/edit it manually..."></textarea></label></div><div><label>Target Job Description<textarea id="optimizerJd" rows="10" placeholder="Paste the complete job description here..."></textarea></label></div></div>
+   <div class="actions"><button onclick="optimizeResume()">Optimize Resume</button><button class="secondary" onclick="useJobMatchForOptimization()">Use Job Match JD</button></div>
+   <div id="optimizerOutput"></div>
+  </div>
+  <div class="card assistant-card">
+   <div class="section-head"><div><span class="eyebrow dark">MODULE 4</span><h2>AI Application Assistant</h2><p class="muted">Create a personalized cover letter, application email and LinkedIn profile suggestions from your resume + target job.</p></div><div class="assistant-badge">AI</div></div>
+   <div class="optimizer-grid"><div><label>Resume Content<textarea id="assistantResume" rows="9" placeholder="Resume text will be filled from your analyzed resume..."></textarea></label></div><div><label>Target Job Description<textarea id="assistantJd" rows="9" placeholder="Paste the complete job description here..."></textarea></label></div></div>
+   <div class="assistant-actions"><label class="tone-select">Cover Letter Tone<select id="letterTone"><option value="professional">Professional</option><option value="confident">Confident</option><option value="friendly">Friendly</option></select></label><button onclick="generateCoverLetter()">Generate Cover Letter</button><button class="secondary" onclick="generateApplicationEmail()">Application Email</button><button class="secondary" onclick="optimizeLinkedIn()">LinkedIn Optimizer</button></div>
+   <div id="assistantOutput"></div>
+  </div>
+  <div class="card phase5-card">
+   <div class="section-head"><div><span class="eyebrow dark">PHASE 5</span><h2>Real AI Resume Optimizer</h2><p class="muted">Use the OpenAI Responses API for deeper, job-specific rewriting. Your API key stays on the server.</p></div><div class="assistant-badge" id="aiStatusBadge">CHECKING AI…</div></div>
+   <div class="optimizer-grid"><div><label>Resume Content<textarea id="realAiResume" rows="10" placeholder="Paste or use your analyzed resume..."></textarea></label></div><div><label>Target Job Description<textarea id="realAiJd" rows="10" placeholder="Paste the target job description..."></textarea></label></div></div>
+   <div class="actions"><button onclick="runRealAi()">✨ Run Real AI Optimization</button><button class="secondary" onclick="useExistingForRealAi()">Use Current Resume + JD</button></div>
+   <div id="realAiOutput"></div>
+  </div>
+  <div class="card tracker-mini-card"><div class="section-head"><div><span class="eyebrow dark">MODULE 5</span><h2>Job Application Tracker</h2><p class="muted">Track applications, interviews, offers and follow-ups without leaving Resume Studio.</p></div><div class="assistant-badge">TRACK</div></div><div class="tracker-mini-actions"><a class="button-link" href="{{ url_for('applications') }}">Open Application Tracker →</a><span class="muted">Saved separately from your resumes.</span></div></div>
+  <div class="card job-match-card"><div class="section-head"><div><span class="eyebrow dark">MODULE 2</span><h2>AI Job Match & Keyword Analysis</h2><p class="muted">Compare your resume against a target job description and get a job-specific optimization plan.</p></div><div class="match-badge" id="matchBadge">—%</div></div><label>Target Job Description<textarea id="jobMatchJd" rows="8" placeholder="Paste the complete job description here..."></textarea></label><button onclick="analyzeJobMatch()">Analyze Job Match</button><div id="jobMatchOutput"></div></div>
+  <div class="card ats-card">
+   <div class="section-head"><div><span class="eyebrow dark">MODULE 3</span><h2>ATS Score & Keyword Intelligence</h2><p class="muted">Simulate how an ATS may read your resume, inspect scoring dimensions and find job-specific keyword gaps.</p></div><div class="ats-score-ring" id="atsScoreRing">—%</div></div>
+   <div class="ats-controls"><label>Resume Content<textarea id="atsResume" rows="8" placeholder="Your analyzed resume will be used automatically..."></textarea></label><label>Target Job Description <span class="muted">(optional but recommended)</span><textarea id="atsJd" rows="8" placeholder="Paste the target job description for keyword intelligence..."></textarea></label></div>
+   <div class="actions"><button onclick="runATSSimulator()">Run ATS Simulator</button><button class="secondary" onclick="useCurrentForATS()">Use Current Resume + JD</button></div>
+   <div id="atsOutput"></div>
+  </div>
+  <div class="card version-card">
+   <div class="section-head"><div><span class="eyebrow dark">MODULE 4</span><h2>AI Resume Builder & Job Versions</h2><p class="muted">Create a job-specific version, review AI suggestions, apply them to the builder, and save a separate version without overwriting your master resume.</p></div><div class="assistant-badge">V4</div></div>
+   <div class="optimizer-grid">
+    <div><label>Target Role<input id="versionRole" placeholder="e.g. Frontend Developer"></label><label>Job Description<textarea id="versionJd" rows="9" placeholder="Paste the target job description..."></textarea></label></div>
+    <div><div class="version-actions"><button onclick="generateResumeVersion()">✨ Generate Job-Specific Resume</button><button class="secondary" onclick="useCurrentForVersion()">Use Current Resume + JD</button></div><div id="versionOutput"></div></div>
+   </div>
+   <div class="version-save-row"><button class="secondary" onclick="saveGeneratedVersion()">💾 Save Generated Version</button><button class="secondary" onclick="loadResumeVersions()">↻ Refresh Versions</button><span id="versionSaveStatus" class="muted"></span></div>
+   <div id="versionList" class="version-list"><p class="muted">Loading your saved resume versions…</p></div>
+  </div>
+ </div>
+</section></main>
+<script>
+const resumeText={{ (result.resume_text if result else '')|tojson }};
+if(document.getElementById('optimizerResume') && resumeText) document.getElementById('optimizerResume').value=resumeText;
+if(document.getElementById('assistantResume') && resumeText) document.getElementById('assistantResume').value=resumeText;
+const fields=['name','email','phone','location','linkedin','skills','summary','experience','projects','education','certifications'];
+let selectedTemplate='classic';
+let accentColor='#2563eb';
+let photoData='';
+const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+function val(id){return document.getElementById(id)?.value||''}
+function getResume(){let r={};fields.forEach(x=>r[x]=val(x));r.template=selectedTemplate;r.accent_color=accentColor;r.photo_data=photoData;return r}
+function sectionLabel(id){return id[0].toUpperCase()+id.slice(1)}
+function renderPreview(){
+ const r=getResume(); const sections=[...document.querySelectorAll('.builder-section')];
+ let photo=r.photo_data?`<img class="preview-photo" src="${r.photo_data}" alt="Profile photo">`:'';
+ let contact=[r.email,r.phone,r.location].filter(Boolean).join(' • ');
+ let html=`<header class="resume-header">${photo}<div class="identity"><h1>${esc(r.name||'Your Name')}</h1><p>${esc(contact)}</p>${r.linkedin?`<small>${esc(r.linkedin)}</small>`:''}</div></header>`;
+ if(r.summary)html+=`<section><h3>Professional Summary</h3><p>${esc(r.summary)}</p></section>`;
+ if(r.skills)html+=`<section><h3>Skills</h3><div class="skill-pills">${r.skills.split(',').map(x=>x.trim()).filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('')}</div></section>`;
+ sections.forEach(x=>{const id=x.dataset.section;const v=r[id];if(v)html+=`<section><h3>${sectionLabel(id)}</h3><div class="preline">${esc(v)}</div></section>`});
+ document.getElementById('resumePreview').innerHTML=html;
+ document.getElementById('resumePreview').style.setProperty('--accent',accentColor);
+}
+fields.forEach(id=>document.getElementById(id)?.addEventListener('input',renderPreview));
+// Drag/drop ordering
+let dragged=null;document.querySelectorAll('.builder-section').forEach(el=>{el.addEventListener('dragstart',()=>{dragged=el;el.classList.add('dragging')});el.addEventListener('dragend',()=>{el.classList.remove('dragging');dragged=null;renderPreview()});el.addEventListener('dragover',e=>{e.preventDefault();if(dragged&&dragged!==el){const box=el.getBoundingClientRect();el.parentNode.insertBefore(dragged,e.clientY>box.top+box.height/2?el.nextSibling:el)}})});
+// File drag/drop styling
+const dz=document.getElementById('dropzone'),fi=document.getElementById('resumeFile');['dragenter','dragover'].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.add('over')}));['dragleave','drop'].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.remove('over')}));dz.addEventListener('drop',e=>{if(e.dataTransfer.files.length){fi.files=e.dataTransfer.files;}});fi.addEventListener('change',()=>{if(fi.files[0])dz.querySelector('b').textContent=fi.files[0].name});
+// Premium templates
+ document.querySelectorAll('.template-btn').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.template-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');selectedTemplate=btn.dataset.template;document.getElementById('resumePreview').className='resume-preview '+selectedTemplate;document.getElementById('templateName').textContent=btn.querySelector('span')?.textContent||btn.textContent.trim();renderPreview()}));
+const accent=document.getElementById('accentColor');accent.addEventListener('input',()=>{accentColor=accent.value;document.getElementById('accentHex').textContent=accentColor.toUpperCase();renderPreview()});
+const photoInput=document.getElementById('profilePhoto');photoInput.addEventListener('change',()=>{const f=photoInput.files[0];if(!f)return; if(f.size>2*1024*1024){alert('Please choose a photo under 2 MB.');photoInput.value='';return;}const reader=new FileReader();reader.onload=()=>{photoData=reader.result;document.getElementById('photoName').textContent=f.name;renderPreview()};reader.readAsDataURL(f)});
+function resetDesign(){selectedTemplate='classic';accentColor='#2563eb';photoData='';document.querySelectorAll('.template-btn').forEach(b=>b.classList.toggle('active',b.dataset.template==='classic'));accent.value=accentColor;document.getElementById('accentHex').textContent=accentColor.toUpperCase();photoInput.value='';document.getElementById('photoName').textContent='No photo selected';document.getElementById('resumePreview').className='resume-preview classic';document.getElementById('templateName').textContent='Classic';renderPreview()}
+async function exportResume(format){const s=document.getElementById('exportStatus');s.textContent='Generating '+format.toUpperCase()+' with '+selectedTemplate+' template...';try{const r=await fetch('/api/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume:getResume(),format})});const d=await r.json();s.innerHTML=d.download_url?`<a class="download" href="${d.download_url}">Download ${format.toUpperCase()} Resume</a>`:esc(d.error||'Export failed.')}catch(e){s.textContent='Export failed.'}}
+async function rewriteResume(){const text=resumeText||[val('summary'),val('experience'),val('projects')].join('\n');const r=await fetch('/api/rewrite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:text,job_description:val('jd')})});const d=await r.json();document.getElementById('rewriteOutput').innerHTML='<h3>Professional Summary</h3><p>'+esc(d.professional_summary)+'</p><h3>Improved Bullets</h3><ul>'+d.improved_bullets.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><h3>Suggested Keywords</h3><div class="chips">'+d.keyword_advice.map(x=>'<span>'+esc(x)+'</span>').join('')+'</div><p class="muted">'+esc(d.note)+'</p>'}
+async function skillGap(){const text=resumeText||[val('summary'),val('skills'),val('experience'),val('projects')].join('\n');const r=await fetch('/api/skill-gap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:text,job_description:val('jd')})});const d=await r.json();document.getElementById('gapOutput').innerHTML='<div class="metric-inline"><span>Readiness</span><strong>'+d.readiness+'%</strong></div><h3>Missing Skills</h3><div class="chips">'+d.missing_skills.map(x=>'<span>'+esc(x)+'</span>').join('')+'</div><h3>Roadmap</h3><ul>'+d.roadmap.map(x=>'<li><b>'+esc(x.skill)+'</b> — '+esc(x.action)+'</li>').join('')+'</ul>'}
+async function optimizeResume(){
+ const out=document.getElementById('optimizerOutput'); const score=document.getElementById('optimizerScore');
+ const text=val('optimizerResume')||resumeText||[val('summary'),val('skills'),val('experience'),val('projects'),val('education')].join('\n');
+ const jd=val('optimizerJd')||val('jobMatchJd')||val('jd');
+ if(!text.trim()||!jd.trim()){out.innerHTML='<p class="error">Add resume content and a target job description first.</p>';return;}
+ out.innerHTML='<p class="muted">Building your job-specific optimization plan...</p>';
+ try{const r=await fetch('/api/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:text,job_description:jd})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Optimization failed');
+ score.textContent=d.optimization_score+'%';
+ out.innerHTML=`<div class="optimization-banner"><b>Optimization readiness: ${d.optimization_score}%</b><span>Use the suggestions below to improve relevance without inventing experience.</span></div><div class="optimizer-result-grid"><div><h3>AI Professional Summary</h3><div class="suggestion-box">${esc(d.optimized_summary)}</div><button class="small-btn" onclick="applySummarySuggestion()">Apply to Builder</button></div><div><h3>Priority Keywords</h3><div class="chips">${d.priority_keywords.map(esc).map(x=>'<span>'+x+'</span>').join('')||'<span>No strong keywords detected</span>'}</div><h3>Missing Skills</h3><div class="chips missing">${d.missing_skills.map(esc).map(x=>'<span>'+x+'</span>').join('')||'<span>None detected</span>'}</div></div></div><h3>Improved Experience / Project Bullets</h3><ul class="suggestion-list">${d.optimized_bullets.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul><h3>Section-by-Section Advice</h3><div class="advice-grid">${Object.entries(d.section_advice).map(([k,v])=>'<div><b>'+esc(k)+'</b><p>'+esc(v)+'</p></div>').join('')}</div><p class="truth-note">⚠️ ${esc(d.truthfulness_note)}</p>`;
+ window.lastOptimization=d;
+ }catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>';}
+}
+function useJobMatchForOptimization(){const jd=val('jobMatchJd')||val('jd');if(jd)document.getElementById('optimizerJd').value=jd;const text=resumeText||[val('summary'),val('skills'),val('experience'),val('projects'),val('education')].join('\n');if(text)document.getElementById('optimizerResume').value=text;}
+function applySummarySuggestion(){if(window.lastOptimization?.optimized_summary){document.getElementById('summary').value=window.lastOptimization.optimized_summary;renderPreview();}}
+
+(function restoreSavedResume(){try{const saved=JSON.parse(localStorage.getItem('resumeStudioSavedResume')||'null');const data=saved?.data||saved?.resume||null;if(!data)return;Object.entries(data).forEach(([k,v])=>{const el=document.getElementById(k);if(el&&typeof v==='string')el.value=v});if(data.template){selectedTemplate=data.template;document.querySelectorAll('.template-btn').forEach(b=>b.classList.toggle('active',b.dataset.template===selectedTemplate));document.getElementById('resumePreview').className='resume-preview '+selectedTemplate;document.getElementById('templateName').textContent=document.querySelector(`.template-btn[data-template="${selectedTemplate}"] span`)?.textContent||'Classic'}if(data.accent_color){accentColor=data.accent_color;accent.value=accentColor;document.getElementById('accentHex').textContent=accentColor.toUpperCase()}if(data.photo_data){photoData=data.photo_data;document.getElementById('photoName').textContent='Saved profile photo'}if(saved.id)window.savedResumeId=saved.id;renderPreview()}catch(e){}})();
+renderPreview();
+
+async function saveResumeToCloud(){const title=prompt('Resume name:', localStorage.getItem('resumeStudioTitle')||'My Resume');if(title===null)return;const existing=JSON.parse(localStorage.getItem('resumeStudioSavedResume')||'null');const r=await fetch('/api/resumes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,resume:getResume(),id:existing?.id||null})});const d=await r.json();if(!r.ok)return alert(d.error||'Save failed');localStorage.setItem('resumeStudioSavedResume',JSON.stringify({id:d.id,title:title,data:getResume()}));localStorage.setItem('resumeStudioTitle',title);const el=document.getElementById('exportStatus');el.textContent='✓ '+d.message+' (Resume #'+d.id+')';}
+
+async function analyzeJobMatch(){
+ const out=document.getElementById('jobMatchOutput'); const badge=document.getElementById('matchBadge');
+ const text=resumeText||[val('summary'),val('skills'),val('experience'),val('projects'),val('education')].join('\n');
+ const jd=val('jobMatchJd')||val('jd');
+ if(!text.trim()||!jd.trim()){out.innerHTML='<p class="error">Add resume content and a job description first.</p>';return;}
+ out.innerHTML='<p class="muted">Analyzing resume against the target role...</p>';
+ try{const r=await fetch('/api/job-match',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:text,job_description:jd})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Analysis failed');
+ badge.textContent=d.overall_match+'%';
+ out.innerHTML=`<div class="match-grid"><div class="match-metric"><span>Overall Match</span><strong>${d.overall_match}%</strong><div class="bar"><i style="width:${d.overall_match}%"></i></div></div><div class="match-metric"><span>Skill Match</span><strong>${d.skill_match}%</strong><div class="bar"><i style="width:${d.skill_match}%"></i></div></div><div class="match-metric"><span>Keyword Match</span><strong>${d.keyword_match}%</strong><div class="bar"><i style="width:${d.keyword_match}%"></i></div></div></div><div class="match-columns"><div><h3>Matched Skills</h3><div class="chips">${d.matched_skills.map(esc).map(x=>'<span>'+x+'</span>').join('')||'<span>None detected</span>'}</div><h3>Missing Skills</h3><div class="chips missing">${d.missing_skills.map(esc).map(x=>'<span>'+x+'</span>').join('')||'<span>None detected</span>'}</div></div><div><h3>Matched Keywords</h3><div class="chips">${d.matched_keywords.map(esc).map(x=>'<span>'+x+'</span>').join('')||'<span>None detected</span>'}</div><h3>Keywords to Consider</h3><div class="chips missing">${d.missing_keywords.map(esc).map(x=>'<span>'+x+'</span>').join('')||'<span>None detected</span>'}</div></div></div><h3>Job-Specific Optimization Plan</h3><ul>${d.recommendations.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>`;
+ }catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>';}
+}
+
+
+function assistantResumeText(){return val('assistantResume')||resumeText||[val('summary'),val('skills'),val('experience'),val('projects'),val('education'),val('certifications')].filter(Boolean).join('\n')}
+function assistantJdText(){return val('assistantJd')||val('optimizerJd')||val('jobMatchJd')||val('jd')}
+function copyAssistant(id){const el=document.getElementById(id);navigator.clipboard?.writeText(el.innerText||el.value||'').then(()=>{const b=document.querySelector(`[data-copy="${id}"]`);if(b){b.textContent='Copied ✓';setTimeout(()=>b.textContent='Copy',1200)}})}
+async function generateCoverLetter(){const out=document.getElementById('assistantOutput');out.innerHTML='<p class="muted">Generating cover letter...</p>';try{const r=await fetch('/api/cover-letter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:assistantResumeText(),job_description:assistantJdText(),tone:val('letterTone')})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Generation failed');out.innerHTML=`<div class="assistant-result"><div class="result-head"><h3>AI Cover Letter</h3><button class="small-btn" data-copy="coverLetterText" onclick="copyAssistant('coverLetterText')">Copy</button></div><div id="coverLetterText" class="generated-text">${esc(d.cover_letter).replace(/\n/g,'<br>')}</div><p class="truth-note">⚠️ ${esc(d.truthfulness_note)}</p></div>`}catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>'}}
+async function generateApplicationEmail(){const out=document.getElementById('assistantOutput');out.innerHTML='<p class="muted">Generating application email...</p>';try{const r=await fetch('/api/application-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:assistantResumeText(),job_description:assistantJdText()})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Generation failed');out.innerHTML=`<div class="assistant-result"><div class="result-head"><h3>Application Email</h3><button class="small-btn" data-copy="applicationEmailText" onclick="copyAssistant('applicationEmailText')">Copy</button></div><div class="email-subject"><b>Subject:</b> ${esc(d.subject)}</div><div id="applicationEmailText" class="generated-text">${esc(d.email).replace(/\n/g,'<br>')}</div></div>`}catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>'}}
+async function optimizeLinkedIn(){const out=document.getElementById('assistantOutput');out.innerHTML='<p class="muted">Optimizing LinkedIn profile...</p>';try{const r=await fetch('/api/linkedin-optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:assistantResumeText(),job_description:assistantJdText()})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Optimization failed');out.innerHTML=`<div class="assistant-result"><div class="assistant-result-grid"><div><h3>Suggested Headline</h3><div class="suggestion-box">${esc(d.headline)}</div><h3>About Section</h3><div class="suggestion-box">${esc(d.about)}</div></div><div><h3>Target Keywords</h3><div class="chips">${d.keywords.map(esc).map(x=>'<span>'+x+'</span>').join('')||'<span>None detected</span>'}</div><h3>Missing Skills</h3><div class="chips missing">${d.missing_skills.map(esc).map(x=>'<span>'+x+'</span>').join('')||'<span>None detected</span>'}</div></div></div><h3>Profile Tips</h3><ul class="suggestion-list">${d.tips.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div>`}catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>'}}
+
+
+async function checkAiStatus(){try{const r=await fetch('/api/ai-status');const d=await r.json();const b=document.getElementById('aiStatusBadge');if(b){b.textContent=d.configured?'REAL AI READY':'LOCAL FALLBACK';b.title=d.configured?'OpenAI API configured':'Set OPENAI_API_KEY to enable real AI';}}catch(e){}}
+function useExistingForRealAi(){document.getElementById('realAiResume').value=resumeText||[val('summary'),val('skills'),val('experience'),val('projects'),val('education'),val('certifications')].filter(Boolean).join('\n');document.getElementById('realAiJd').value=val('optimizerJd')||val('jobMatchJd')||val('assistantJd')||val('jd');}
+async function runRealAi(){const out=document.getElementById('realAiOutput');const resume=val('realAiResume')||resumeText;const jd=val('realAiJd')||val('optimizerJd')||val('jobMatchJd')||val('assistantJd')||val('jd');if(!resume.trim()||!jd.trim()){out.innerHTML='<p class="error">Add resume content and a target job description first.</p>';return;}out.innerHTML='<p class="muted">Real AI is analyzing your resume...</p>';try{const r=await fetch('/api/ai-optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:resume,job_description:jd})});const d=await r.json();if(!r.ok)throw new Error(d.error+(d.detail?': '+d.detail:''));out.innerHTML=`<div class="assistant-result"><div class="optimization-banner"><b>Real AI Analysis</b><span>${esc(d.ats_summary||'Job-specific analysis completed.')}</span></div><h3>Professional Summary</h3><div class="suggestion-box">${esc(d.professional_summary||'')}</div><h3>Improved Bullets</h3><ul class="suggestion-list">${(d.improved_bullets||[]).map(x=>'<li>'+esc(x)+'</li>').join('')}</ul><div class="optimizer-result-grid"><div><h3>Priority Keywords</h3><div class="chips">${(d.priority_keywords||[]).map(x=>'<span>'+esc(x)+'</span>').join('')}</div></div><div><h3>Missing Skills</h3><div class="chips missing">${(d.missing_skills||[]).map(x=>'<span>'+esc(x)+'</span>').join('')}</div></div></div><h3>Interview Focus</h3><ul class="suggestion-list">${(d.interview_focus||[]).map(x=>'<li>'+esc(x)+'</li>').join('')}</ul><p class="truth-note">⚠️ ${esc(d.truthfulness_note||'Verify all generated content before using it.')}</p></div>`;}catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>';}}
+checkAiStatus();
+
+function useCurrentForATS(){
+ const text=resumeText||[val('summary'),val('skills'),val('experience'),val('projects'),val('education'),val('certifications')].filter(Boolean).join('\n');
+ document.getElementById('atsResume').value=text;
+ document.getElementById('atsJd').value=val('jobMatchJd')||val('optimizerJd')||val('assistantJd')||val('jd');
+}
+async function runATSSimulator(){
+ const out=document.getElementById('atsOutput'), ring=document.getElementById('atsScoreRing');
+ const text=val('atsResume')||resumeText||[val('summary'),val('skills'),val('experience'),val('projects'),val('education'),val('certifications')].filter(Boolean).join('\n');
+ const jd=val('atsJd')||val('jobMatchJd')||val('optimizerJd')||val('assistantJd')||val('jd');
+ if(!text.trim()){out.innerHTML='<p class="error">Add or upload resume content first.</p>';return;}
+ out.innerHTML='<p class="muted">Running ATS simulation and keyword scan...</p>';
+ try{
+  const r=await fetch('/api/ats-simulator',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_text:text,job_description:jd})});
+  const d=await r.json(); if(!r.ok)throw new Error(d.error||'ATS simulation failed');
+  ring.textContent=d.ats_score+'%';
+  const dim=d.dimensions||{};
+  const sections=Object.entries(d.sections||{}).map(([k,v])=>`<span class="section-status ${v?'ok':'bad'}">${v?'✓':'×'} ${esc(k)}</span>`).join('');
+  const flags=(d.formatting_flags||[]).map(x=>`<li class="flag-${esc(x.level)}"><b>${esc(x.level)}</b> — ${esc(x.message)}</li>`).join('')||'<li class="flag-ok"><b>OK</b> — No major formatting flags detected.</li>';
+  const kw=d.keyword_intelligence||{};
+  out.innerHTML=`<div class="ats-summary"><div><b>${esc(d.grade)}</b><span>${d.parser_ready?'ATS parser readiness: Good':'ATS parser readiness: Review warnings below'}</span></div><div class="ats-mini-stat"><b>${d.word_count}</b><span>words</span></div><div class="ats-mini-stat"><b>${d.bullet_count}</b><span>bullets</span></div><div class="ats-mini-stat"><b>${d.quantified_examples}</b><span>quantified</span></div></div>
+  <div class="ats-dimensions">${[['Content',dim.content],['Structure',dim.structure],['Length',dim.length],['Impact',dim.impact],['Keywords',dim.keywords]].map(x=>`<div class="ats-dim"><div><span>${x[0]}</span><b>${x[1]}%</b></div><div class="bar"><i style="width:${x[1]}%"></i></div></div>`).join('')}</div>
+  <div class="ats-columns"><div><h3>Detected Sections</h3><div class="section-statuses">${sections}</div><h3>Parser / Formatting Checks</h3><ul class="ats-flags">${flags}</ul></div><div><h3>Keyword Intelligence</h3><div class="keyword-counts"><span>Matched <b>${(kw.matched||[]).length}</b></span><span>Missing <b>${(kw.missing||[]).length}</b></span></div><div class="chips">${(kw.matched||[]).map(x=>'<span>'+esc(x)+'</span>').join('')||'<span>No matched keywords yet</span>'}</div><h4>Priority gaps</h4><div class="chips missing">${(kw.missing||[]).map(x=>'<span>'+esc(x)+'</span>').join('')||'<span>No major keyword gaps</span>'}</div></div></div>
+  <h3>Action Plan</h3><ul class="suggestion-list">${(d.recommendations||[]).map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>`;
+ }catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>';}
+}
+
+
+let lastGeneratedVersion=null;
+function useCurrentForVersion(){
+ document.getElementById('versionRole').value=val('target_role')||'';
+ document.getElementById('versionJd').value=val('jobMatchJd')||val('optimizerJd')||val('jd')||'';
+}
+async function generateResumeVersion(){
+ const out=document.getElementById('versionOutput'); const jd=val('versionJd');
+ if(!jd.trim()){out.innerHTML='<p class="error">Paste a target job description first.</p>';return;}
+ out.innerHTML='<p class="muted">AI is building a job-specific resume version…</p>';
+ try{
+  const r=await fetch('/api/ai-build-resume',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume:getResume(),job_description:jd})});
+  const d=await r.json(); if(!r.ok)throw new Error(d.error||'Generation failed'); lastGeneratedVersion=d;
+  document.getElementById('versionRole').value=d.target_role||val('versionRole');
+  out.innerHTML=`<div class="version-result"><div class="optimization-banner"><b>${esc(d.source==='real_ai'?'Real AI':'Local AI')} version ready</b><span>${esc(d.truthfulness_note||'Verify generated content before publishing.')}</span></div><h3>Professional Summary</h3><div class="suggestion-box">${esc(d.professional_summary||'')}</div><h3>Priority Keywords</h3><div class="chips">${(d.priority_keywords||[]).map(x=>'<span>'+esc(x)+'</span>').join('')||'<span>None detected</span>'}</div><h3>Improved Bullets</h3><ul class="suggestion-list">${(d.improved_bullets||[]).map(x=>'<li>'+esc(x)+'</li>').join('')||'<li>No bullets generated.</li>'}</ul><h3>Missing Keywords</h3><div class="chips missing">${(d.missing_keywords||[]).map(x=>'<span>'+esc(x)+'</span>').join('')||'<span>No major gaps detected</span>'}</div><div class="version-result-actions"><button class="small-btn" onclick="applyGeneratedVersion()">Apply to Builder</button></div></div>`;
+ }catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>';}
+}
+function applyGeneratedVersion(){
+ if(!lastGeneratedVersion)return; const d=lastGeneratedVersion;
+ if(d.professional_summary)document.getElementById('summary').value=d.professional_summary;
+ if(d.improved_bullets?.length){const existing=val('experience');const n=existing?existing.split('\n').filter(Boolean).length:0;if(n){document.getElementById('experience').value=d.improved_bullets.slice(0,n).join('\n');if(d.improved_bullets.length>n)document.getElementById('projects').value=d.improved_bullets.slice(n).join('\n');}else document.getElementById('experience').value=d.improved_bullets.slice(0,8).join('\n');}
+ renderPreview(); document.getElementById('versionSaveStatus').textContent='✓ Suggestions applied to builder. Review before saving.';
+}
+async function saveGeneratedVersion(){
+ const status=document.getElementById('versionSaveStatus'); if(!lastGeneratedVersion){status.textContent='Generate a version first.';return;}
+ const title=prompt('Version name:',lastGeneratedVersion.version_title||'Job Targeted Resume'); if(title===null)return;
+ const r=await fetch('/api/resume-versions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,resume:getResume(),target_role:lastGeneratedVersion.target_role||val('versionRole'),job_description:val('versionJd'),version_label:'Job Targeted'})});
+ const d=await r.json(); if(!r.ok){status.textContent=d.error||'Save failed.';return;} status.textContent='✓ '+d.message+' #'+d.id; loadResumeVersions();
+}
+async function loadResumeVersions(){
+ const out=document.getElementById('versionList'); if(!out)return;
+ try{const r=await fetch('/api/resume-versions');const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not load versions');
+ if(!d.versions?.length){out.innerHTML='<div class="empty-version">No saved versions yet. Generate one above.</div>';return;}
+ out.innerHTML=d.versions.map(v=>`<div class="version-item"><div><b>${esc(v.title)}</b><small>${esc(v.version_label||'Version')} • ${esc(v.target_role||'General resume')}</small></div><div class="history-actions"><button class="small-btn" onclick="openResumeVersion(${v.id})">Open</button><button class="small-btn secondary" onclick="duplicateResumeVersion(${v.id})">Duplicate</button><button class="small-btn secondary" onclick="deleteResumeVersion(${v.id})">Delete</button></div></div>`).join('');
+ }catch(e){out.innerHTML='<p class="error">'+esc(e.message)+'</p>';}
+}
+async function openResumeVersion(id){
+ try{const r=await fetch('/api/resumes/'+id);const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not open version');const data=d.data||{};Object.entries(data).forEach(([k,v])=>{const el=document.getElementById(k);if(el&&typeof v==='string')el.value=v});if(data.template){selectedTemplate=data.template;document.querySelectorAll('.template-btn').forEach(b=>b.classList.toggle('active',b.dataset.template===selectedTemplate));document.getElementById('resumePreview').className='resume-preview '+selectedTemplate;}if(data.accent_color){accentColor=data.accent_color;accent.value=accentColor;document.getElementById('accentHex').textContent=accentColor.toUpperCase()}if(data.photo_data){photoData=data.photo_data;document.getElementById('photoName').textContent='Saved profile photo'}renderPreview();localStorage.setItem('resumeStudioSavedResume',JSON.stringify({id:d.id,title:d.title,data:d.data}));document.getElementById('versionSaveStatus').textContent='✓ Opened '+d.title;}catch(e){alert(e.message);}
+}
+async function duplicateResumeVersion(id){const r=await fetch('/api/resume-versions/'+id+'/duplicate',{method:'POST'});const d=await r.json();if(!r.ok)return alert(d.error||'Duplicate failed');document.getElementById('versionSaveStatus').textContent='✓ '+d.message;loadResumeVersions();}
+async function deleteResumeVersion(id){if(!confirm('Delete this resume version?'))return;const r=await fetch('/api/resumes/'+id,{method:'DELETE'});const d=await r.json();if(!r.ok)return alert(d.error||'Delete failed');loadResumeVersions();}
+loadResumeVersions();
+
+</script></body></html>
