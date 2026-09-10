@@ -12,7 +12,7 @@ from utils.application_assistant import generate_cover_letter, generate_applicat
 from utils.ai_provider import generate_json, is_configured
 from utils.resume_versions import local_generate
 from utils.application_tracker import normalize_application, STATUSES
-from utils.database import init_db, create_user, authenticate, save_resume, list_resumes, get_resume, delete_resume, create_resume_version, list_resume_versions, update_resume_version_meta, create_application, list_applications, get_application, update_application, delete_application, application_stats, admin_stats, admin_analytics, list_users, set_user_status, set_user_role, log_activity, log_ai_usage
+from utils.database import init_db, create_user, authenticate, save_resume, list_resumes, get_resume, delete_resume, create_resume_version, list_resume_versions, update_resume_version_meta, create_application, list_applications, get_application, update_application, delete_application, application_stats, admin_stats, admin_analytics, list_users, set_user_status, set_user_role, log_activity, log_ai_usage, get_conn
 
 import os, time, csv, io, secrets, logging, uuid
 from datetime import timedelta
@@ -82,7 +82,7 @@ def internal_error(error):
 
 init_db()
 # Optional first-run admin provisioning. Set ADMIN_EMAIL and ADMIN_PASSWORD before starting the app.
-from utils.database import get_conn, USE_POSTGRES
+from utils.database import USE_POSTGRES
 if os.getenv('ADMIN_EMAIL') and os.getenv('ADMIN_PASSWORD'):
     with get_conn() as _conn:
         _email = os.getenv('ADMIN_EMAIL').strip().lower()
@@ -102,7 +102,36 @@ EXPORT_DIR.mkdir(exist_ok=True)
 ALLOWED = {"pdf", "docx", "txt"}
 
 def current_user():
-    return session.get('user')
+    """Return the authenticated user only if it still exists in the active database.
+
+    This matters when a deployment switches from SQLite to a fresh PostgreSQL
+    database: an old browser session can contain a user id that does not exist
+    in the new database. Treat that session as expired instead of allowing a
+    later INSERT to fail on the users foreign key.
+    """
+    user = session.get('user')
+    if not user or not user.get('id'):
+        return None
+    try:
+        with get_conn() as conn:
+            row = conn.execute(
+                'SELECT id,name,email,role,is_active FROM users WHERE id=?',
+                (user['id'],)
+            ).fetchone()
+        if not row or not row['is_active']:
+            session.pop('user', None)
+            return None
+        fresh = {
+            'id': row['id'],
+            'name': row['name'],
+            'email': row['email'],
+            'role': row.get('role', 'user') if hasattr(row, 'get') else row['role']
+        }
+        session['user'] = fresh
+        return fresh
+    except Exception:
+        logger.exception('Unable to validate authenticated user session')
+        return user
 
 
 def track_ai(feature, provider, success=True, started=None):
