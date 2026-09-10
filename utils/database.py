@@ -44,8 +44,14 @@ def get_conn():
     if USE_POSTGRES:
         import psycopg
         def hybrid_row(cursor):
-            keys = [c.name for c in cursor.description]
-            return lambda values: HybridRow(zip(keys, values))
+            # psycopg calls the row-factory with a cursor before a query
+            # has necessarily populated cursor.description. Resolve the
+            # column names when an actual row is being created instead.
+            def make_row(values):
+                description = cursor.description or ()
+                keys = [c.name for c in description]
+                return HybridRow(zip(keys, values))
+            return make_row
         conn = psycopg.connect(DATABASE_URL, row_factory=hybrid_row, connect_timeout=15)
         return PostgresConnection(conn)
     conn = sqlite3.connect(DB_PATH, timeout=15)
