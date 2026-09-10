@@ -82,15 +82,17 @@ def internal_error(error):
 
 init_db()
 # Optional first-run admin provisioning. Set ADMIN_EMAIL and ADMIN_PASSWORD before starting the app.
-from utils.database import get_conn
+from utils.database import get_conn, USE_POSTGRES
 if os.getenv('ADMIN_EMAIL') and os.getenv('ADMIN_PASSWORD'):
     with get_conn() as _conn:
-        _row = _conn.execute('SELECT id FROM users WHERE email=?', (os.getenv('ADMIN_EMAIL').strip().lower(),)).fetchone()
+        _email = os.getenv('ADMIN_EMAIL').strip().lower()
+        _row = _conn.execute('SELECT id FROM users WHERE email=?', (_email,)).fetchone()
         if not _row:
-            _conn.execute('INSERT INTO users(name,email,password_hash,role,is_active) VALUES(?,?,?,?,1)', (os.getenv('ADMIN_NAME','Administrator'), os.getenv('ADMIN_EMAIL').strip().lower(), __import__('werkzeug.security', fromlist=['generate_password_hash']).generate_password_hash(os.getenv('ADMIN_PASSWORD')), 'admin'))
+            _ph = __import__('werkzeug.security', fromlist=['generate_password_hash']).generate_password_hash(os.getenv('ADMIN_PASSWORD'))
+            _conn.execute('INSERT INTO users(name,email,password_hash,role,is_active) VALUES(?,?,?,?,1)', (os.getenv('ADMIN_NAME','Administrator'), _email, _ph, 'admin'))
             _conn.commit()
         else:
-            _conn.execute("UPDATE users SET role='admin', is_active=1 WHERE email=?", (os.getenv('ADMIN_EMAIL').strip().lower(),)); _conn.commit()
+            _conn.execute("UPDATE users SET role='admin', is_active=1 WHERE email=?", (_email,)); _conn.commit()
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 EXPORT_DIR = BASE_DIR / "exports"

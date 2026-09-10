@@ -169,3 +169,16 @@ docker run --env-file .env -p 8000:8000 ai-resume-analyzer
 ```
 
 For persistent production data, mount a volume containing `RESUME_DB_PATH`; do not rely on a disposable container filesystem.
+
+
+## PostgreSQL production database (Phase 7)
+
+The app now supports both SQLite (local development) and PostgreSQL (production). Set `DATABASE_URL` to a PostgreSQL connection string and the app will create the required tables automatically on startup. On Render, use the Postgres **Internal Database URL** from the database Connect page and keep the web service and database in the same region.
+
+For Render deployment:
+1. Create a Render Postgres database.
+2. In the web service Environment variables, add `DATABASE_URL` using the database Internal URL.
+3. Keep `RESUME_DB_PATH` only as the local SQLite fallback; it is ignored when `DATABASE_URL` is set.
+4. Redeploy the web service.
+
+Do not commit a real `.env` file or expose database credentials.
